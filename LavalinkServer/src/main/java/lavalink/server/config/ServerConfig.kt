@@ -36,5 +36,6 @@ class ServerConfig {
     var isGcWarnings = true
     var isYoutubeSearchEnabled = true
     var isSoundcloudSearchEnabled = true
+    var isSharedAudioPlayerManager = false
     var ratelimit: RateLimitConfig? = null
 }

@@ -18,6 +18,7 @@ import com.sedmelluq.lava.extensions.youtuberotator.planner.RotatingIpRoutePlann
 import com.sedmelluq.lava.extensions.youtuberotator.planner.RotatingNanoIpRoutePlanner
 import com.sedmelluq.lava.extensions.youtuberotator.tools.ip.Ipv4Block
 import com.sedmelluq.lava.extensions.youtuberotator.tools.ip.Ipv6Block
+import lavalink.server.util.AudioPlayerManagerSource
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -34,7 +35,17 @@ class AudioPlayerConfiguration {
     private val log = LoggerFactory.getLogger(AudioPlayerConfiguration::class.java)
 
     @Bean
-    fun audioPlayerManagerSupplier(sources: AudioSourcesConfig, serverConfig: ServerConfig, routePlanner: AbstractRoutePlanner?) = Supplier<AudioPlayerManager> {
+    fun audioPlayerManagerSource(sources: AudioSourcesConfig, serverConfig: ServerConfig, routePlanner: AbstractRoutePlanner?): AudioPlayerManagerSource? {
+        return if (serverConfig.isSharedAudioPlayerManager) {
+            log.info("Using shared AudioPlayerManager")
+            val audioPlayerManager = createAudioPlayerManager(sources, serverConfig, routePlanner)
+            AudioPlayerManagerSource { audioPlayerManager }
+        } else {
+            AudioPlayerManagerSource { createAudioPlayerManager(sources, serverConfig, routePlanner) }
+        }
+    }
+
+    private fun createAudioPlayerManager(sources: AudioSourcesConfig, serverConfig: ServerConfig, routePlanner: AbstractRoutePlanner?): AudioPlayerManager {
         val audioPlayerManager = DefaultAudioPlayerManager()
 
         if (serverConfig.isGcWarnings) {
@@ -60,12 +71,12 @@ class AudioPlayerConfiguration {
 
         audioPlayerManager.configuration.isFilterHotSwapEnabled = true
 
-        audioPlayerManager
+        return audioPlayerManager
     }
 
     @Bean
-    fun restAudioPlayerManager(supplier: Supplier<AudioPlayerManager>): AudioPlayerManager {
-        return supplier.get()
+    fun restAudioPlayerManager(source: AudioPlayerManagerSource): AudioPlayerManager {
+        return source.get()
     }
 
     @Bean

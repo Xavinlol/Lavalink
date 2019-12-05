@@ -28,6 +28,7 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import lavalink.server.config.AudioSendFactoryConfiguration
 import lavalink.server.config.ServerConfig
 import lavalink.server.player.Player
+import lavalink.server.util.AudioPlayerManagerSource
 import lavalink.server.util.Util
 import net.dv8tion.jda.api.audio.factory.IAudioSendFactory
 import org.json.JSONObject
@@ -45,7 +46,7 @@ import java.util.function.Supplier
 @Service
 class SocketServer(
         private val serverConfig: ServerConfig,
-        private val audioPlayerManagerSupplier: Supplier<AudioPlayerManager>,
+        private val audioPlayerManagerSource: AudioPlayerManagerSource,
         private val audioSendFactoryConfiguration: AudioSendFactoryConfiguration
 ) : TextWebSocketHandler() {
 
@@ -92,7 +93,7 @@ class SocketServer(
 
         shardCounts[userId] = shardCount
 
-        contextMap[session.id] = SocketContext(audioPlayerManagerSupplier, session, this, userId)
+        contextMap[session.id] = SocketContext(audioPlayerManagerSource, session, this, userId, serverConfig.isSharedAudioPlayerManager)
         log.info("Connection successfully established from " + session.remoteAddress!!)
     }
 

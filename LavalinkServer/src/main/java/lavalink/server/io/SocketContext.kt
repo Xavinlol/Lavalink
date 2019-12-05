@@ -29,6 +29,7 @@ import io.undertow.websockets.core.WebSocketCallback
 import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.core.WebSockets
 import io.undertow.websockets.jsr.UndertowSession
+import lavalink.server.util.AudioPlayerManagerSource
 import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import org.springframework.web.socket.WebSocketSession
@@ -46,17 +47,18 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
 
 class SocketContext internal constructor(
-        audioPlayerManagerSupplier: Supplier<AudioPlayerManager>,
+        audioPlayerManagerSource: AudioPlayerManagerSource,
         var session: WebSocketSession,
         private val socketServer: SocketServer,
-        val userId: String
+        val userId: String,
+        private val sharedAudioPlayerManager: Boolean
 ) {
 
     companion object {
         private val log = LoggerFactory.getLogger(SocketContext::class.java)
     }
 
-    val audioPlayerManager: AudioPlayerManager = audioPlayerManagerSupplier.get()
+    val audioPlayerManager: AudioPlayerManager = audioPlayerManagerSource.get()
     internal val magma: MagmaApi = MagmaFactory.of { socketServer.getAudioSendFactory(it) }
     //guildId <-> Player
     val players = ConcurrentHashMap<String, Player>()
@@ -169,7 +171,9 @@ class SocketContext internal constructor(
     internal fun shutdown() {
         log.info("Shutting down " + playingPlayers.size + " playing players.")
         executor.shutdown()
-        audioPlayerManager.shutdown()
+        if (!this.sharedAudioPlayerManager) {
+            audioPlayerManager.shutdown()
+        }
         playerUpdateService.shutdown()
         players.keys.forEach { guildId ->
             val member = MagmaMember.builder()
